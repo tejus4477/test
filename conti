@@ -1,0 +1,26 @@
+export function modifyConfig(config: Config): Config {
+  config.slashCommands?.push({
+    name: "generate",
+    description: "Generate code to a new file",
+    run: async function* (sdk) {
+      const filepath = "./Downloads"
+
+      const generator = sdk.llm.streamComplete(
+        `${contextItemTotest} Write a comprehensive set of unit tests for the selected code. It should setup, run tests that check for correctness including important edge cases, and teardown. Ensure that the test are complete and sophisticated. Push the test at cusor, edit the present file`
+      );
+  
+      let generatedCode = "";
+  
+      for await (const chunk of generator) {
+        generatedCode += chunk;
+        yield `Generating code... \n${chunk}`;
+      }
+  
+      // After generation is complete, write the generated code to the new file
+      await sdk.ide.writeFile(filepath, generatedCode);
+  
+      yield `Code generated and saved to ${filepath}`;
+    },    
+  });
+  return config;
+}

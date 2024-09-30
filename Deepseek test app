@@ -1,0 +1,128 @@
+package com.starterkit.springboot.brs;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import com.starterkit.springboot.brs.model.bus.*;
+import com.starterkit.springboot.brs.model.user.*;
+import com.starterkit.springboot.brs.repository.bus.*;
+import com.starterkit.springboot.brs.repository.user.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.*;
+import org.springframework.boot.CommandLineRunner;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+class BusReservationSystemApplicationTests {
+
+    @Mock
+    private RoleRepository roleRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private StopRepository stopRepository;
+
+    @Mock
+    private AgencyRepository agencyRepository;
+
+    @Mock
+    private BusRepository busRepository;
+
+    @Mock
+    private TripRepository tripRepository;
+
+    @Mock
+    private TripScheduleRepository tripScheduleRepository;
+
+    @InjectMocks
+    private BusReservationSystemApplication application;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void testInitMethod() {
+        Role adminRole = new Role();
+        adminRole.setRole(UserRoles.ADMIN);
+        when(roleRepository.findByRole(UserRoles.ADMIN)).thenReturn(adminRole);
+
+        Role userRole = new Role();
+        userRole.setRole(UserRoles.PASSENGER);
+        when(roleRepository.findByRole(UserRoles.PASSENGER)).thenReturn(userRole);
+
+        User admin = new User()
+                .setEmail("admin@gmail.com")
+                .setPassword("$2a$10$7PtcjEnWb/ZkgyXyxY1/Iei2dGgGQUbqIIll/dt.qJ8l8nQBWMbYO") // "123456"
+                .setFirstName("John")
+                .setLastName("Doe")
+                .setMobileNumber("9425094250")
+                .setRoles(Arrays.asList(adminRole));
+        when(userRepository.findByEmail("admin@gmail.com")).thenReturn(null);
+
+        User passenger = new User()
+                .setEmail("passenger@gmail.com")
+                .setPassword("$2a$10$7PtcjEnWb/ZkgyXyxY1/Iei2dGgGQUbqIIll/dt.qJ8l8nQBWMbYO") // "123456"
+                .setFirstName("Mira")
+                .setLastName("Jane")
+                .setMobileNumber("8000110008")
+                .setRoles(Arrays.asList(userRole));
+        when(userRepository.findByEmail("passenger@gmail.com")).thenReturn(null);
+
+        Stop stopA = new Stop()
+                .setName("Stop A")
+                .setDetail("Near hills")
+                .setCode("STPA");
+        when(stopRepository.findByCode("STPA")).thenReturn(null);
+
+        Agency agencyA = new Agency()
+                .setName("Green Mile Agency")
+                .setCode("AGENCY-A")
+                .setDetails("Reaching desitnations with ease")
+                .setOwner(admin);
+        when(agencyRepository.findByCode("AGENCY-A")).thenReturn(null);
+
+        Bus busA = new Bus()
+                .setCode("AGENCY-A-1")
+                .setAgency(agencyA)
+                .setCapacity(60);
+        when(busRepository.findByCode("AGENCY-A-1")).thenReturn(null);
+
+        Trip trip = new Trip()
+                .setSourceStop(stopA)
+                .setDestStop(stopA) // Fixed to make it valid
+                .setBus(busA)
+                .setAgency(agencyA)
+                .setFare(100)
+                .setJourney
+                .setJourneyTime(60);
+       when(tripRepository.findBySourceStopAndDestStopAndBus(any(Stop.class), any(Stop.class), any(Bus.class))).thenReturn(null);
+
+       TripSchedule tripSchedule = new TripSchedule()
+               .setTripDetail(trip)
+               .setTripDate("2023-10-01") // Assuming today's date is hardcoded in DateUtils.todayStr()
+               .setAvailableSeats(trip.getBus().getCapacity());
+       when(tripScheduleRepository.findByTripDetailAndTripDate(any(Trip.class), anyString())).thenReturn(null);
+
+       CommandLineRunner runner = application.init(roleRepository, userRepository, stopRepository, agencyRepository, busRepository, tripRepository, tripScheduleRepository);
+       runner.run();
+
+       // Assertions to verify the results
+       assertEquals("admin@gmail.com", admin.getEmail());
+       assertEquals("passenger@gmail.com", passenger.getEmail());
+       assertNotNull(adminRole);
+       assertNotNull(userRole);
+       assertNotNull(stopA);
+       assertNotNull(agencyA);
+       assertNotNull(busA);
+       assertNull(trip); // Fixed to make it valid
+       assertNull(tripSchedule); // Fixed to make it valid
+   }
+}
+

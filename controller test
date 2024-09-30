@@ -1,0 +1,119 @@
+import com.starterkit.springboot.brs.controller.v1.api.BusReservationController;
+import com.starterkit.springboot.brs.controller.v1.request.BookTicketRequest;
+import com.starterkit.springboot.brs.controller.v1.request.GetTripSchedulesRequest;
+import com.starterkit.springboot.brs.dto.model.bus.TicketDto;
+import com.starterkit.springboot.brs.dto.model.bus.TripDto;
+import com.starterkit.springboot.brs.dto.model.bus.TripScheduleDto;
+import com.starterkit.springboot.brs.dto.model.user.UserDto;
+import com.starterkit.springboot.brs.service.BusReservationService;
+import com.starterkit.springboot.brs.service.UserService;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+import java.util.Optional;
+
+public class BusReservationControllerTest {
+
+    private BusReservationController busReservationController;
+    private BusReservationService busReservationService;
+    private UserService userService;
+
+    @BeforeEach
+    public void setup() {
+        busReservationService = Mockito.mock(BusReservationService.class);
+        userService = Mockito.mock(UserService.class);
+        busReservationController = new BusReservationController(busReservationService, userService);
+    }
+
+    @Test
+    public void bookTicket_validRequest_returnsTicketDto() {
+        BookTicketRequest bookTicketRequest = new BookTicketRequest();
+        TripScheduleDto tripScheduleDto = new TripScheduleDto();
+        UserDto userDto = new UserDto();
+        TicketDto ticketDto = new TicketDto();
+
+        Mockito.when(busReservationService.bookTicket(tripScheduleDto, userDto)).thenReturn(ticketDto);
+
+        Assertions.assertEquals(ticketDto, busReservationController.bookTicket(bookTicketRequest).getPayload());
+    }
+
+    @Test
+    public void bookTicket_invalidTripId_returnsNotFoundResponse() {
+        BookTicketRequest bookTicketRequest = new BookTicketRequest();
+
+        Mockito.when(busReservationService.getTripById(bookTicketRequest.getTripID())).thenReturn(null);
+
+        Assertions.assertEquals("Not Found", busReservationController.bookTicket(bookTicketRequest).getStatus());
+    }
+
+    @Test
+    public void bookTicket_invalidTripDate_returnsNotFoundResponse() {
+        BookTicketRequest bookTicketRequest = new BookTicketRequest();
+        TripDto tripDto = new TripDto();
+
+        Mockito.when(busReservationService.getTripById(bookTicketRequest.getTripID())).thenReturn(tripDto);
+        Mockito.when(busReservationService.getTripSchedule(tripDto, bookTicketRequest.getTripDate(), true)).thenReturn(null);
+
+        Assertions.assertEquals("Not Found", busReservationController.bookTicket(bookTicketRequest).getStatus());
+    }
+
+    @Test
+    public void bookTicket_invalidUser_returnsBadRequestResponse() {
+        BookTicketRequest bookTicketRequest = new BookTicketRequest();
+        TripScheduleDto tripScheduleDto = new TripScheduleDto();
+
+        Mockito.when(userService.findUserByEmail((String) Mockito.any())).thenReturn(null);
+
+        Assertions.assertEquals("Bad Request", busReservationController.bookTicket(bookTicketRequest).getStatus());
+    }
+
+}
+
+public class UserControllerTest {
+
+    private UserController userController;
+    private UserService userService;
+
+    @BeforeEach
+    public void setup() {
+        userService = Mockito.mock(UserService.class);
+        userController = new UserController();
+        userController.userService = userService;
+    }
+
+    @Test
+    public void signup_ValidRequest_ReturnsUserDto() {
+        UserSignupRequest request = new UserSignupRequest();
+        request.setEmail("test@email.com");
+        request.setPassword("password");
+
+        UserDto userDto = new UserDto();
+        userDto.setEmail("test@email.com");
+        userDto.setPassword("password");
+
+        Mockito.when(userService.signup(Mockito.any())).thenReturn(userDto);
+
+        UserDto result = userController.registerUser(request, false);
+
+        Assertions.assertEquals(userDto, result);
+    }
+
+    @Test
+    public void signup_InvalidEmail_ThrowsException() {
+        UserSignupRequest request = new UserSignupRequest();
+        request.setEmail("invalid_email");
+        request.setPassword("password");
+
+        Assertions.assertThrows(Exception.class, () -> userController.registerUser(request, false));
+    }
+
+    @Test
+    public void signup_MissingPassword_ThrowsException() {
+        UserSignupRequest request = new UserSignupRequest();
+        request.setEmail("test@email.com");
+
+        Assertions.assertThrows(Exception.class, () -> userController.registerUser(request, false));
+    }
+}

@@ -1,0 +1,169 @@
+import com.starterkit.springboot.brs.model.bus.*;
+import com.starterkit.springboot.brs.model.user.Role;
+import com.starterkit.springboot.brs.model.user.User;
+import com.starterkit.springboot.brs.model.user.UserRoles;
+import com.starterkit.springboot.brs.repository.bus.*;
+import com.starterkit.springboot.brs.repository.user.RoleRepository;
+import com.starterkit.springboot.brs.repository.user.UserRepository;
+import com.starterkit.springboot.brs.util.DateUtils;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+
+import java.util.Arrays;
+
+@DataJpaTest
+public class BusReservationSystemApplicationTest {
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private StopRepository stopRepository;
+
+    @Autowired
+    private AgencyRepository agencyRepository;
+
+    @Autowired
+    private BusRepository busRepository;
+
+    @Autowired
+    private TripRepository tripRepository;
+
+    @Autowired
+    private TripScheduleRepository tripScheduleRepository;
+
+    private Role adminRole;
+    private Role userRole;
+    private User admin;
+    private User passenger;
+    private Stop stopA;
+    private Stop stopB;
+    private Agency agencyA;
+    private Bus busA;
+    private Trip trip;
+    private TripSchedule tripSchedule;
+
+    @BeforeEach
+    public void setup() {
+        adminRole = roleRepository.findByRole(UserRoles.ADMIN);
+        userRole = roleRepository.findByRole(UserRoles.PASSENGER);
+        admin = userRepository.findByEmail("admin@gmail.com");
+        passenger = userRepository.findByEmail("passenger@gmail.com");
+        stopA = stopRepository.findByCode("STPA");
+        stopB = stopRepository.findByCode("STPB");
+        agencyA = agencyRepository.findByCode("AGENCY-A");
+        busA = busRepository.findByCode("AGENCY-A-1");
+        trip = tripRepository.findBySourceStopAndDestStopAndBus(stopA, stopB, busA);
+        tripSchedule = tripScheduleRepository.findByTripDetailAndTripDate(trip, DateUtils.todayStr());
+    }
+
+    @Test
+    public void testAdminRoleCreation() {
+        Assertions.assertNotNull(adminRole);
+        Assertions.assertEquals(UserRoles.ADMIN, adminRole.getRole());
+    }
+
+    @Test
+    public void testUserRoleCreation() {
+        Assertions.assertNotNull(userRole);
+        Assertions.assertEquals(UserRoles.PASSENGER, userRole.getRole());
+    }
+
+    @Test
+    public void testAdminUserCreation() {
+        Assertions.assertNotNull(admin);
+        Assertions.assertEquals("admin@gmail.com", admin.getEmail());
+        Assertions.assertEquals("John", admin.getFirstName());
+        Assertions.assertEquals("Doe", admin.getLastName());
+        Assertions.assertEquals("9425094250", admin.getMobileNumber());
+        Assertions.assertEquals(Arrays.asList(adminRole), admin.getRoles());
+    }
+
+    @Test
+    public void testPassengerUserCreation() {
+        Assertions.assertNotNull(passenger);
+        Assertions.assertEquals("passenger@gmail.com", passenger.getEmail());
+        Assertions.assertEquals("Mira", passenger.getFirstName());
+        Assertions.assertEquals("Jane", passenger.getLastName());
+        Assertions.assertEquals("8000110008", passenger.getMobileNumber());
+        Assertions.assertEquals(Arrays.asList(userRole), passenger.getRoles());
+    }
+
+    // Add tests for other entities and methods here
+}
+
+@Test
+public void testStopCreation() {
+    Assertions.assertNotNull(stopA);
+    Assertions.assertEquals("Stop A", stopA.getName());
+    Assertions.assertEquals("Near hills", stopA.getDetail());
+    Assertions.assertEquals("STPA", stopA.getCode());
+}
+
+@Test
+public void testAgencyCreation() {
+    Assertions.assertNotNull(agencyA);
+    Assertions.assertEquals("Green Mile Agency", agencyA.getName());
+    Assertions.assertEquals("AGENCY-A", agencyA.getCode());
+    Assertions.assertEquals("Reaching desitnations with ease", agencyA.getDetails());
+    Assertions.assertEquals(admin, agencyA.getOwner());
+}
+
+@Test
+public void testBusCreation() {
+    Assertions.assertNotNull(busA);
+    Assertions.assertEquals("AGENCY-A-1", busA.getCode());
+    Assertions.assertEquals(agencyA, busA.getAgency());
+    Assertions.assertEquals(60, busA.getCapacity());
+}
+
+@Test
+public void testTripCreation() {
+    Assertions.assertNotNull(trip);
+    Assertions.assertEquals(stopA, trip.getSourceStop());
+    Assertions.assertEquals(stopB, trip.getDestStop());
+    Assertions.assertEquals(busA, trip.getBus());
+    Assertions.assertEquals(agencyA, trip.getAgency());
+    Assertions.assertEquals(100, trip.getFare());
+    Assertions.assertEquals(60, trip.getJourneyTime());
+}
+
+@Test
+public void testTripScheduleCreation() {
+    Assertions.assertNotNull(tripSchedule);
+    Assertions.assertEquals(trip, tripSchedule.getTripDetail());
+    Assertions.assertEquals(DateUtils.todayStr(), tripSchedule.getTripDate());
+    Assertions.assertEquals(busA.getCapacity(), tripSchedule.getAvailableSeats());
+}
+
+// Add tests for other methods here, such as booking a ticket, canceling a ticket, etc.
+
+@Test
+public void testBookTicket() {
+    Ticket ticket = new Ticket();
+    ticket.setUser(passenger);
+    ticket.setTripSchedule(tripSchedule);
+    ticket.setSeatNumber(1);
+    ticket.setAmount(trip.getFare());
+
+    Assertions.assertEquals(tripSchedule.getAvailableSeats(), tripSchedule.getAvailableSeats() - 1);
+}
+
+@Test
+public void testCancelTicket() {
+    Ticket ticket = new Ticket();
+    ticket.setUser(passenger);
+    ticket.setTripSchedule(tripSchedule);
+    ticket.setSeatNumber(1);
+    ticket.setAmount(trip.getFare());
+
+    ticketRepository.delete(ticket);
+
+    Assertions.assertEquals(tripSchedule.getAvailableSeats(), tripSchedule.getAvailableSeats() + 1);
+}

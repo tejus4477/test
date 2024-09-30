@@ -1,0 +1,388 @@
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+public class TripServiceUnitTest {
+
+    @Mock
+    private TripRepository tripRepository;
+
+    @Mock
+    private StopRepository stopRepository;
+
+    @Mock
+    private BusRepository busRepository;
+
+    @Mock
+    private AgencyRepository agencyRepository;
+
+    @Mock
+    private TripScheduleRepository tripScheduleRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    private TripService tripService;
+
+    @BeforeEach
+    public void setup() {
+        tripService = new TripService(tripRepository, stopRepository, busRepository, agencyRepository, tripScheduleRepository, userRepository);
+    }
+
+    // Test for getAvailableTripsBetweenStops method
+    @Test
+    public void getAvailableTripsBetweenStops_ValidInput_ReturnsTrips() {
+        // Given
+        String sourceStopCode = "SRC";
+        String destinationStopCode = "DST";
+        List<Trip> availableTrips = new ArrayList<>();
+        when(tripRepository.findAllBySourceStopAndDestStop(any(), any())).thenReturn(availableTrips);
+
+        // When
+        List<TripDto> result = tripService.getAvailableTripsBetweenStops(sourceStopCode, destinationStopCode);
+
+        // Then
+        assertEquals(availableTrips.size(), result.size());
+    }
+
+    @Test
+    public void getAvailableTripsBetweenStops_InvalidSourceStop_ThrowsException() {
+        // Given
+        String sourceStopCode = "INVALID_SRC";
+        String destinationStopCode = "DST";
+
+        // When
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            tripService.getAvailableTripsBetweenStops(sourceStopCode, destinationStopCode);
+        });
+
+        // Then
+        assertEquals("Entity Not Found: Stop with code INVALID_SRC does not exist.", exception.getMessage());
+    }
+
+    // Test for getAvailableTripSchedules method
+    @Test
+    public void getAvailableTripSchedules_ValidInput_ReturnsTripSchedules() {
+        // Given
+        String sourceStopCode = "SRC";
+        String destinationStopCode = "DST";
+        String tripDate = "2023-04-01";
+        List<Trip> availableTrips = new ArrayList<>();
+        when(tripRepository.findAllBySourceStopAndDestStop(any(), any())).thenReturn(availableTrips);
+
+        // When
+        List<TripScheduleDto> result = tripService.getAvailableTripSchedules(sourceStopCode, destinationStopCode, tripDate);
+
+        // Then
+        assertEquals(availableTrips.size(), result.size());
+    }
+
+    // Test for bookTicket method
+    @Test
+    public void bookTicket_ValidInput_ReturnsTicketDto() {
+        // Given
+        TripScheduleDto tripScheduleDto = new TripScheduleDto();
+        UserDto userDto = new UserDto();
+
+        // When
+        TicketDto result = tripService.bookTicket(tripScheduleDto, userDto);
+
+        // Then
+        assertNotNull(result);
+    }
+
+    @Test
+    public void bookTicket_InvalidTripSchedule_ThrowsException() {
+        // Given
+        TripScheduleDto tripScheduleDto = new TripScheduleDto();
+        UserDto userDto = new UserDto();
+        when(tripScheduleRepository.findById(any())).thenReturn(Optional.empty());
+
+        // When
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            tripService.bookTicket(tripScheduleDto, userDto);
+        });
+
+        // Then
+        assertEquals("Entity Not Found: Trip with id {} does not exist on date {}.", exception.getMessage());
+    }
+
+    // Test for getUser method
+    @Test
+    public void getUser_ValidEmail_ReturnsUser() {
+        // Given
+        String email = "user@example.com";
+        User user = new User();
+        when(userRepository.findByEmail(any())).thenReturn(user);
+
+        // When
+        User result = tripService.getUser(email);
+
+        // Then
+        assertEquals(user, result);
+    }
+
+    @Test
+    public void getUser_InvalidEmail_ReturnsNull() {
+            // Given
+    String email = "invalid@example.com";
+    when(userRepository.findByEmail(any())).thenReturn(null);
+
+    // When
+    User result = tripService.getUser(email);
+
+    // Then
+    assertNull(result);
+    }  
+
+    // Test for getStop method
+    @Test
+    public void getStop_ValidCode_ReturnsStop() {
+        // Given
+        String stopCode = "STOP1";
+        Stop stop = new Stop();
+        when(stopRepository.findByCode(any())).thenReturn(stop);
+
+        // When
+        Stop result = tripService.getStop(stopCode);
+
+        // Then
+        assertEquals(stop, result);
+    }
+
+    @Test
+    public void getStop_InvalidCode_ThrowsException() {
+        // Given
+        String stopCode = "INVALID_STOP";
+        when(stopRepository.findByCode(any())).thenReturn(null);
+
+        // When
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            tripService.getStop(stopCode);
+        });
+
+        // Then
+        assertEquals("Entity Not Found: Stop with code INVALID_STOP does not exist.", exception.getMessage());
+    }
+
+    // Test for getBus method
+    @Test
+    public void getBus_ValidCode_ReturnsBus() {
+        // Given
+        String busCode = "BUS1";
+        Bus bus = new Bus();
+        when(busRepository.findByCode(any())).thenReturn(bus);
+
+        // When
+        Bus result = tripService.getBus(busCode);
+
+        // Then
+        assertEquals(bus, result);
+    }
+
+    @Test
+    public void getBus_InvalidCode_ThrowsException() {
+        // Given
+        String busCode = "INVALID_BUS";
+        when(busRepository.findByCode(any())).thenReturn(null);
+
+        // When
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            tripService.getBus(busCode);
+        });
+
+        // Then
+        assertEquals("Entity Not Found: Bus with code INVALID_BUS does not exist.", exception.getMessage());
+    }
+
+    // Test for getAgency method
+    @Test
+    public void getAgency_ValidCode_ReturnsAgency() {
+        // Given
+        String agencyCode = "AGENCY1";
+        Agency agency = new Agency();
+        when(agencyRepository.findByCode(any())).thenReturn(agency);
+
+        // When
+        Agency result = tripService.getAgency(agencyCode);
+
+        // Then
+        assertEquals(agency, result);
+    }
+
+    @Test
+    public void getAgency_InvalidCode_ThrowsException() {
+        // Given
+        String agencyCode = "INVALID_AGENCY";
+        when(agencyRepository.findByCode(any())).thenReturn(null);
+
+        // When
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            tripService.getAgency(agencyCode);
+        });
+
+        // Then
+        assertEquals("Entity Not Found: Agency with code INVALID_AGENCY does not exist.", exception.getMessage());
+    }
+
+    // Test for getTrip method
+    @Test
+    public void getTrip_ValidId_ReturnsTrip() {
+        // Given
+        Long tripId = 1L;
+        Trip trip = new Trip();
+        when(tripRepository.findById(any())).thenReturn(Optional.of(trip));
+
+        // When
+        Trip result = tripService.getTrip(tripId);
+
+        // Then
+        assertEquals(trip, result);
+    }
+
+    @Test
+    public void getTrip_InvalidId_ThrowsException() {
+        // Given
+        Long tripId = -1L;
+        when(tripRepository.findById(any())).thenReturn(Optional.empty());
+
+        // When
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            tripService.getTrip(tripId);
+        });
+
+        // Then
+        assertEquals("Entity Not Found: Trip with id {} does not exist.", exception.getMessage());
+    }
+
+    // Test for getTripSchedule method
+    @Test
+    public void getTripSchedule_ValidId_ReturnsTripSchedule() {
+        // Given
+        Long tripScheduleId = 1L;
+        TripSchedule tripSchedule = new TripSchedule();
+        when(tripScheduleRepository.findById(any())).thenReturn(Optional.of(tripSchedule));
+
+        // When
+        TripSchedule result = tripService.getTripSchedule(tripScheduleId);
+
+        // Then
+        assertEquals(tripSchedule, result);
+    }
+
+    @Test
+    public void getTripSchedule_InvalidId_ThrowsException() {
+        // Given
+        Long tripScheduleId = -1L;
+        when(tripScheduleRepository.findById(any())).thenReturn(Optional.empty());
+
+        // When
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            tripService.getTripSchedule(tripScheduleId);
+        });
+
+        // Then
+        assertEquals("Entity Not Found: Trip with id {} does not exist on date {}.", exception.getMessage());
+    }
+
+    // Test for getTicket method
+    @Test
+    public void getTicket_ValidId_ReturnsTicket() {
+        // Given
+        Long ticketId = 1L;
+        Ticket ticket = new Ticket();
+        when(ticketRepository.findById(any())).thenReturn(Optional.of(ticket));
+
+        // When
+        Ticket result = tripService.getTicket(ticketId);
+
+        // Then
+        assertEquals(ticket, result);
+    }
+
+    @Test
+    public void getTicket_InvalidId_ThrowsException() {
+        // Given
+        Long ticketId = -1L;
+        when(ticketRepository.findById(any())).thenReturn(Optional.empty());
+
+        // When
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            tripService.getTicket(ticketId);
+        });
+
+        // Then
+        assertEquals("Entity Not Found: Ticket with id {} does not exist.", exception.getMessage());
+    }
+
+    // Test for bookTicket method
+    @Test
+    public void bookTicket_ValidInput_ReturnsTicket() {
+        // Given
+        TicketRequest ticketRequest = new TicketRequest(/* valid inputs */);
+        Ticket ticket = new Ticket(/* ticket details */);
+        when(ticketService.bookTicket(any())).thenReturn(ticket);
+
+        // When
+        Ticket result = tripService.bookTicket(ticketRequest);
+
+        // Then
+        assertEquals(ticket, result);
+    }
+
+    @Test
+    public void bookTicket_InvalidInput_ThrowsException() {
+        // Given
+        TicketRequest ticketRequest = new TicketRequest(/* invalid inputs */);
+
+        // When
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            tripService.bookTicket(ticketRequest);
+        });
+
+        // Then
+        assertEquals("Validation Failed: Invalid ticket request.", exception.getMessage());
+    }
+
+    // Test for cancelTicket method
+    @Test
+    public void cancelTicket_ValidTicketId_ReturnsTrue() {
+        // Given
+        Long ticketId = 1L;
+        when(ticketService.cancelTicket(any())).thenReturn(true);
+
+        // When
+        boolean result = tripService.cancelTicket(ticketId);
+
+        // Then
+        assertTrue(result);
+    }
+
+    @Test
+    public void cancelTicket_InvalidTicketId_ThrowsException() {
+        // Given
+        Long ticketId = -1L;
+
+        // When
+        Exception exception = assertThrows(RuntimeException.class, () -> {
+            tripService.cancelTicket(ticketId);
+        });
+
+        // Then
+        assertEquals("Entity Not Found: Ticket with id {} does not exist.", exception.getMessage());
+    }
+
+
+
